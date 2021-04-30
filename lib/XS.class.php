@@ -283,14 +283,16 @@ class XS extends XSComponent
 	 */
 	public function __construct($file)
 	{
-		if (strlen($file) < 255 && !is_file($file)) {
-			$appRoot = getenv('XS_APP_ROOT');
-			if ($appRoot === false) {
-				$appRoot = defined('XS_APP_ROOT') ? XS_APP_ROOT : XS_LIB_ROOT . '/../app';
-			}
-			$file2 = $appRoot . '/' . $file . '.ini';
-			if (is_file($file2)) {
-				$file = $file2;
+		if (!is_array($file)) {
+			if (strlen($file) < 255 && !is_file($file)) {
+				$appRoot = getenv('XS_APP_ROOT');
+				if ($appRoot === false) {
+					$appRoot = defined('XS_APP_ROOT') ? XS_APP_ROOT : XS_LIB_ROOT . '/../app';
+				}
+				$file2 = $appRoot . '/' . $file . '.ini';
+				if (is_file($file2)) {
+					$file = $file2;
+				}
 			}
 		}
 		$this->loadIniFile($file);
@@ -638,7 +640,10 @@ class XS extends XSComponent
 		// check cache
 		$cache = false;
 		$cache_write = '';
-		if (strlen($file) < 255 && file_exists($file)) {
+		if (is_array($file)) {
+			$data = $file;
+			$file = substr(md5(json_encode($file)), 8, 8) . '.ini';
+		} else if (strlen($file) < 255 && file_exists($file)) {
 			$cache_key = md5(__CLASS__ . '::ini::' . realpath($file));
 			if (function_exists('apcu_fetch')) {
 				$cache = apcu_fetch($cache_key);
@@ -665,7 +670,11 @@ class XS extends XSComponent
 		}
 
 		// parse ini file
-		$this->_config = $this->parseIniData($data);
+		if (is_array($data)) {
+			$this->_config = $data;
+		} else {
+			$this->_config = $this->parseIniData($data);
+		}
 		if ($this->_config === false) {
 			throw new XSException('Failed to parse project config file/string: \'' . substr($file, 0, 10) . '...\'');
 		}
